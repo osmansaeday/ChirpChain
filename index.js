@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const express = require('express');
 const userRoutes = require('./routes/users');
+require('dotenv').config();
+// console.log(process.env.JWT_SECRET); // This should print your secret key
+// const auth = require('../middleware/auth');
+
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,7 +19,10 @@ mongoose.connect('mongodb+srv://ozmame2:BJQa28cojvin8ubm@chirpchain.dhwpbhi.mong
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
-app.use('/users', userRoutes);
+app.use('/api/users', userRoutes);
+
+const postRoutes = require('./routes/posts');
+app.use('/api/posts', postRoutes);
 
 
 app.get('/', (req, res) => {

@@ -1,7 +1,9 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const User = require('../models/User'); // Adjust the path as necessary
 const router = express.Router();
+const auth = require('../middleware/auth');
 
 router.post('/register', async (req, res) => {
   try {
@@ -32,20 +34,33 @@ router.post('/register', async (req, res) => {
 // POST route for user login
 router.post('/login', async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.body.username });
+    // Determine if the user is logging in with an email or a username
+    const loginField = req.body.login.includes('@') ? { email: req.body.login } : { username: req.body.login };
+
+    // Find the user by email or username
+    const user = await User.findOne(loginField);
     if (!user) {
-      return res.status(400).json({ message: 'Cannot find user' });
+      console.log('User not found');
+      return res.status(400).send('Invalid login credentials.');
     }
 
-    if (await bcrypt.compare(req.body.password, user.password)) {
-      const token = jwt.sign({ username: user.username }, process.env.TOKEN_SECRET);
-      return res.header('auth-token', token).json({ message: 'Logged in successfully', token: token });
-    } else {
-      return res.status(400).json({ message: 'Not Allowed' });
+    // Check if the password is correct
+    const validPassword = await bcrypt.compare(req.body.password, user.password);
+    if (!validPassword) {
+      console.log('Invalid password');
+      return res.status(400).send('Invalid login credentials.');
     }
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
+
+    // Generate JWT token
+    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Send the token to the client
+    res.send({ token: token });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).send('Something went wrong.');
   }
 });
+
 
 module.exports = router;
