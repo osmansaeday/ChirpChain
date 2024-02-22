@@ -2,15 +2,25 @@ const express = require('express');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const auth = require('../middleware/auth'); // Assuming you've created the auth middleware
+const upload = require('../middleware/upload'); // Import Multer configuration
+
+
+
 const router = express.Router();
 
 // Route to create a new post
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, upload.single('image'), async (req, res) => {
+    if (!req.body.content) {
+        return res.status(400).send({ error: 'Content is required.' });
+    }
+    
+    const post = new Post({
+        ...req.body,
+        user: req.user._id,
+        imagePath: req.file ? req.file.path : '', // Save the path of the uploaded file
+    });
+
     try {
-        const post = new Post({
-            ...req.body,
-            user: req.user._id,
-        });
         await post.save();
         res.status(201).send(post);
     } catch (error) {
@@ -214,6 +224,7 @@ router.delete('/comments/:commentId', auth, async (req, res) => {
         res.status(500).send(error);
     }
 });
+
 
   
 

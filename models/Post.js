@@ -15,6 +15,8 @@ const postSchema = new mongoose.Schema({
         default: Date.now,
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    imagePath: String,
+
     // Add any other fields like images, likes, comments etc. as needed
 });
 
