@@ -5,6 +5,7 @@ const User = require('../models/User'); // Adjust the path as necessary
 const router = express.Router();
 const auth = require('../middleware/auth');
 
+// Route for user registration 
 router.post('/register', async (req, res) => {
   try {
     // Check for required fields
@@ -31,7 +32,18 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// POST route for user login
+// Route to get all users (For internal use - secure accordingly)
+router.get('/internal/users', async (req, res) => {
+  try {
+      const users = await User.find({});
+      res.send(users);
+  } catch (error) {
+      res.status(500).send(error);
+  }
+});
+
+
+// Route for user login
 router.post('/login', async (req, res) => {
   try {
     // Determine if the user is logging in with an email or a username
@@ -61,6 +73,72 @@ router.post('/login', async (req, res) => {
     res.status(500).send('Something went wrong.');
   }
 });
+
+// Route to update user information
+router.patch('/me', auth, async (req, res) => {
+  const updates = Object.keys(req.body);
+  const allowedUpdates = ['username', 'email', 'password', 'currentPassword'];
+  const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+
+  if (!isValidOperation || !req.body.currentPassword) {
+      return res.status(400).send({ error: 'Invalid updates or missing current password!' });
+  }
+
+  try {
+      const user = req.user;
+      const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+
+      if (!isMatch) {
+          return res.status(401).send({ error: 'Current password is incorrect.' });
+      }
+
+      // Exclude 'currentPassword' from updates
+      const updatesToApply = updates.filter(update => update !== 'currentPassword');
+
+      for (let update of updatesToApply) {
+          user[update] = req.body[update];
+          if (update === 'password') {
+              user.password = await bcrypt.hash(req.body.password, 10);
+          }
+      }
+
+      await user.save();
+      res.send(user);
+  } catch (error) {
+      res.status(400).send(error);
+  }
+});
+
+
+// Route to delete user account
+router.delete('/me', auth, async (req, res) => {
+  if (!req.body.currentPassword) {
+      return res.status(400).send({ error: 'Current password is required.' });
+  }
+
+  try {
+      const user = req.user;
+      const isMatch = await bcrypt.compare(req.body.currentPassword, user.password);
+
+      if (!isMatch) {
+          return res.status(401).send({ error: 'Current password is incorrect.' });
+      }
+
+      // Proceed with deletion since the password matches
+      const deletionResult = await User.deleteOne({ _id: user._id });
+
+      if (deletionResult.deletedCount === 0) {
+          // No user was deleted, handle accordingly
+          return res.status(404).send({ message: 'User not found.' });
+      }
+
+      res.send({ message: 'User deleted successfully.' });
+  } catch (error) {
+      console.error('Delete error:', error);
+      res.status(500).send(error);
+  }
+});
+
 
 
 module.exports = router;
