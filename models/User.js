@@ -18,7 +18,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // You can add more fields relevant to your project
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
 });
 
 const User = mongoose.model('User', userSchema);

@@ -13,7 +13,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
     if (!req.body.content) {
         return res.status(400).send({ error: 'Content is required.' });
     }
-    
+
     const post = new Post({
         ...req.body,
         user: req.user._id,
@@ -38,6 +38,22 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Route to get the feed 
+router.get('/feed', auth, async (req, res) => {
+    try {
+      const currentUser = req.user;
+  
+      // Fetch posts from followed users
+      const posts = await Post.find({ user: { $in: currentUser.following } })
+                              .populate('user', 'username')
+                              .sort({ createdAt: -1 }); // Sort by creation time, newest first
+  
+      res.send(posts);
+    } catch (error) {
+      res.status(500).send(error);
+    }
+  });
+  
 // Route to get a single post by ID
 router.get('/:postId', async (req, res) => {
     try {
@@ -226,7 +242,6 @@ router.delete('/comments/:commentId', auth, async (req, res) => {
 });
 
 
-  
 
 
 module.exports = router;

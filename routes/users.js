@@ -145,6 +145,47 @@ router.delete('/me', auth, async (req, res) => {
   }
 });
 
+/////////////////////////////////////////followers////////////////////////////////////////////
+// Route to follow/unfollow a user (routes/users.js)
+router.patch('/toggleFollow/:id', auth, async (req, res) => {
+  try {
+      const targetUserId = req.params.id;
+      const currentUser = req.user;
+
+      // Check if the user is trying to follow themselves
+      if (targetUserId === currentUser._id.toString()) {
+          return res.status(400).send({ error: 'Users cannot follow themselves.' });
+      }
+
+      const targetUser = await User.findById(targetUserId);
+
+      if (!targetUser) {
+          return res.status(404).send({ error: 'User not found.' });
+      }
+
+      const isFollowing = currentUser.following.some(followingId => followingId.equals(targetUserId));
+
+      if (isFollowing) {
+          // Unfollow logic
+          currentUser.following = currentUser.following.filter(id => !id.equals(targetUserId));
+          targetUser.followers = targetUser.followers.filter(id => !id.equals(currentUser._id));
+          await currentUser.save();
+          await targetUser.save();
+          res.status(200).send({ message: 'User unfollowed successfully.' });
+      } else {
+          // Follow logic
+          currentUser.following.push(targetUser._id);
+          targetUser.followers.push(currentUser._id);
+          await currentUser.save();
+          await targetUser.save();
+          res.status(200).send({ message: 'User followed successfully.' });
+      }
+  } catch (error) {
+      res.status(500).send(error);
+  }
+});
+
+
 
 
 module.exports = router;
